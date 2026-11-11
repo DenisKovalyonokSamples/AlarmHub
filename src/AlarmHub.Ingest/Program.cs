@@ -12,6 +12,10 @@ builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
 
+// Panels send event types as readable strings ("AlarmTriggered"), not as numbers.
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
+
 builder.Services.AddDbContext<IngestDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Ingest")));
 
@@ -59,6 +63,13 @@ builder.Services.AddOpenTelemetry()
         }));
 
 WebApplication app = builder.Build();
+
+// Development convenience: create the schema on startup (production uses EF migrations).
+if (app.Environment.IsDevelopment())
+{
+    using IServiceScope scope = app.Services.CreateScope();
+    scope.ServiceProvider.GetRequiredService<IngestDbContext>().Database.EnsureCreated();
+}
 
 app.UseExceptionHandler();
 

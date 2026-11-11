@@ -10,6 +10,11 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 // Problem details give every error a stable RFC 9457 shape, which the future React console relies on.
 builder.Services.AddProblemDetails();
 
+// Enums travel as strings: a request with "Motion" is self-describing and does not break when
+// a new enum member changes the numeric values.
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
+
 // Built-in OpenAPI document is exposed in development at /openapi/v1.json.
 builder.Services.AddOpenApi();
 
@@ -49,6 +54,14 @@ builder.Services.AddOpenTelemetry()
         }));
 
 WebApplication app = builder.Build();
+
+// Development convenience: create the schema on startup. Production uses versioned EF migrations
+// applied by the deployment pipeline, never EnsureCreated.
+if (app.Environment.IsDevelopment())
+{
+    using IServiceScope scope = app.Services.CreateScope();
+    scope.ServiceProvider.GetRequiredService<AlarmHubDbContext>().Database.EnsureCreated();
+}
 
 app.UseExceptionHandler();
 

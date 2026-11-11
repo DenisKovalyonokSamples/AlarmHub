@@ -1,0 +1,23 @@
+# Local development stack for AlarmHub.
+# Postgres hosts one database per service; the Service Bus emulator is added in the next milestone.
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: alarmhub-postgres
+    environment:
+      POSTGRES_USER: alarm
+      POSTGRES_PASSWORD: alarm
+      POSTGRES_DB: alarmhub_api
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./deploy/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - alarmhub-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alarm -d alarmhub_api"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  alarmhub-pgdata:
