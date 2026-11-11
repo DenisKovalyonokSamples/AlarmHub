@@ -25,8 +25,37 @@ internal static class InternalPanelsEndpoints
         group.MapPost("/verify", VerifyPanelKeyAsync)
             .WithName("VerifyPanelKey");
 
+        group.MapGet("/{panelId:guid}", GetPanelAsync)
+            .WithName("GetPanelDirectoryEntry");
+
         return app;
     }
+
+    /// <summary>
+    /// Returns the minimal panel projection needed by other services (site and serial number).
+    /// </summary>
+    private static async Task<Results<Ok<PanelDirectoryResponse>, NotFound>> GetPanelAsync(
+        Guid panelId,
+        AlarmHubDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        PanelDirectoryResponse? panel = await dbContext.Panels
+            .AsNoTracking()
+            .Where(candidate => candidate.Id == panelId)
+            .Select(candidate => new PanelDirectoryResponse(
+                candidate.Id,
+                candidate.SiteId,
+                candidate.SerialNumber))
+            .SingleOrDefaultAsync(cancellationToken);
+
+        return panel is null ? TypedResults.NotFound() : TypedResults.Ok(panel);
+    }
+
+    /// <summary>Panel projection exposed to other services.</summary>
+    /// <param name="Id">Panel identifier.</param>
+    /// <param name="SiteId">Owning site.</param>
+    /// <param name="SerialNumber">Manufacturer serial number.</param>
+    internal sealed record PanelDirectoryResponse(Guid Id, Guid SiteId, string SerialNumber);
 
     /// <summary>
     /// Checks whether the presented key belongs to the panel. The ingest service calls this on every batch.
