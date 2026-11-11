@@ -65,6 +65,9 @@ app.MapCustomersEndpoints();
 app.MapSitesEndpoints();
 app.MapPanelsEndpoints();
 
+// Service-to-service routes: reachable only inside the platform network, never through the gateway.
+app.MapInternalPanelsEndpoints();
+
 app.Run();
 
 /// <summary>
