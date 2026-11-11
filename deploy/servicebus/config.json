@@ -1,0 +1,31 @@
+{
+  "UserConfig": {
+    "Namespaces": [
+      {
+        "Name": "sbemulatorns",
+        "Topics": [
+          {
+            "Name": "device-events",
+            "Subscriptions": [
+              {
+                "Name": "processing"
+              }
+            ]
+          },
+          {
+            "Name": "incidents",
+            "Subscriptions": [
+              {
+                "Name": "notifications"
+              }
+            ]
+          }
+        ],
+        "Queues": []
+      }
+    ],
+    "Logging": {
+      "Type": "Console"
+    }
+  }
+}

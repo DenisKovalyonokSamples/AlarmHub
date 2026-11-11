@@ -50,4 +50,12 @@ builder.Services.AddOpenTelemetry()
         }));
 
 IHost host = builder.Build();
+
+// Development convenience: create the schema on startup (production applies EF migrations).
+if (builder.Environment.IsDevelopment())
+{
+    using IServiceScope scope = host.Services.CreateScope();
+    scope.ServiceProvider.GetRequiredService<NotificationsDbContext>().Database.EnsureCreated();
+}
+
 await host.RunAsync();

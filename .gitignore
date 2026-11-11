@@ -47,3 +47,4 @@ Desktop.ini
 
 ## Docker / local data
 .data/
+.logs/

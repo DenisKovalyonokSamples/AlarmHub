@@ -18,7 +18,8 @@ builder.Services.AddHttpClient<IPanelDirectory, HttpPanelDirectory>(client =>
 });
 
 string? serviceBusConnection = builder.Configuration.GetConnectionString("ServiceBus");
-string topicName = builder.Configuration["ServiceBus:Topic"] ?? "device-events";
+string consumeTopic = builder.Configuration["ServiceBus:Topic"] ?? "device-events";
+string publishTopic = builder.Configuration["ServiceBus:PublishTopic"] ?? "incidents";
 string subscriptionName = builder.Configuration["ServiceBus:Subscription"] ?? "processing";
 
 if (string.IsNullOrWhiteSpace(serviceBusConnection))
@@ -32,11 +33,11 @@ else
 
     builder.Services.AddSingleton(provider => provider
         .GetRequiredService<ServiceBusClient>()
-        .CreateSender(topicName));
+        .CreateSender(publishTopic));
 
     builder.Services.AddSingleton(provider => provider
         .GetRequiredService<ServiceBusClient>()
-        .CreateProcessor(topicName, subscriptionName, new ServiceBusProcessorOptions
+        .CreateProcessor(consumeTopic, subscriptionName, new ServiceBusProcessorOptions
         {
             // One prefetch keeps throughput predictable without holding a large buffer of messages.
             PrefetchCount = 10,
@@ -65,4 +66,13 @@ builder.Services.AddOpenTelemetry()
         }));
 
 IHost host = builder.Build();
+
+// Development convenience: create the schema on startup (production applies EF migrations).
+if (builder.Environment.IsDevelopment())
+{
+    using IServiceScope scope = host.Services.CreateScope();
+    scope.ServiceProvider.GetRequiredService<ProcessingDbContext>().Database.EnsureCreated();
+}
+
 await host.RunAsync();
+
