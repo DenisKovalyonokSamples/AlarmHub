@@ -1,3 +1,4 @@
+﻿using System.Diagnostics;
 using System.Text.Json;
 using AlarmHub.Contracts.Incidents;
 using AlarmHub.Notifications.Domain;
@@ -63,6 +64,10 @@ public sealed class IncidentOpenedConsumer(
     /// <param name="args">Message context.</param>
     private async Task HandleMessageAsync(ProcessMessageEventArgs args)
     {
+        // The Azure Service Bus SDK already creates a consumer activity parented by the
+        // producer's "Diagnostic-Id" property, so no extra activity is started here.
+
+
         IncidentOpenedV1? incident = JsonSerializer.Deserialize<IncidentOpenedV1>(args.Message.Body);
 
         if (incident is null)
@@ -137,3 +142,4 @@ public sealed class IncidentOpenedConsumer(
         return Task.CompletedTask;
     }
 }
+

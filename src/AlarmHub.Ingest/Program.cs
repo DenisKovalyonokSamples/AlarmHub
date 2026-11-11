@@ -50,6 +50,7 @@ builder.Services.AddHostedService<OutboxDispatcher>();
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("alarmhub-ingest"))
     .WithTracing(tracing => tracing
+        .AddSource("Azure.Messaging.ServiceBus")
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
         .AddOtlpExporter(options =>

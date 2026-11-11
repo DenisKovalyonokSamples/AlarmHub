@@ -39,6 +39,8 @@ if (!string.IsNullOrWhiteSpace(serviceBusConnection))
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("alarmhub-notifications"))
     .WithTracing(tracing => tracing
+        .AddSource("Azure.Messaging.ServiceBus")
+        .AddSource("AlarmHub.Notifications.Trace")
         .AddOtlpExporter(options =>
         {
             string? endpoint = builder.Configuration["OpenTelemetry:Endpoint"];

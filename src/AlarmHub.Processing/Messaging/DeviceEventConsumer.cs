@@ -1,3 +1,4 @@
+﻿using System.Diagnostics;
 using System.Text.Json;
 using AlarmHub.Contracts.DeviceEvents;
 using AlarmHub.Contracts.Incidents;
@@ -14,11 +15,11 @@ namespace AlarmHub.Processing.Messaging;
 /// <remarks>
 /// Reliability rules implemented here:
 /// <list type="bullet">
-/// <item><description><b>Idempotency</b> — the inbox row is inserted in the same transaction as the incident,
+/// <item><description><b>Idempotency</b> вЂ” the inbox row is inserted in the same transaction as the incident,
 /// so a redelivered message cannot open two incidents.</description></item>
-/// <item><description><b>Poison messages</b> — after the broker's delivery count is exhausted the message is
+/// <item><description><b>Poison messages</b> вЂ” after the broker's delivery count is exhausted the message is
 /// dead-lettered; the error is logged with the event id so it can be replayed.</description></item>
-/// <item><description><b>Tracing</b> — the ambient activity continues the trace started by ingest thanks to the
+/// <item><description><b>Tracing</b> вЂ” the ambient activity continues the trace started by ingest thanks to the
 /// propagated <c>traceparent</c> property.</description></item>
 /// </list>
 /// </remarks>
@@ -27,7 +28,7 @@ namespace AlarmHub.Processing.Messaging;
 /// <param name="panelDirectory">Panel lookup used to resolve the site.</param>
 /// <param name="timeProvider">Clock.</param>
 /// <param name="logger">Logger.</param>
-public sealed class DeviceEventConsumer(
+public sealed partial class DeviceEventConsumer(
     ServiceBusProcessor processor,
     IServiceScopeFactory scopeFactory,
     IPanelDirectory panelDirectory,
@@ -63,6 +64,10 @@ public sealed class DeviceEventConsumer(
     /// <param name="args">Message and cancellation context.</param>
     private async Task HandleMessageAsync(ProcessMessageEventArgs args)
     {
+        // The Azure Service Bus SDK already creates a consumer activity parented by the
+        // producer's "Diagnostic-Id" property, so no extra activity is started here.
+
+
         DeviceEventReceivedV1? deviceEvent = JsonSerializer.Deserialize<DeviceEventReceivedV1>(args.Message.Body);
 
         if (deviceEvent is null)
@@ -146,3 +151,4 @@ public sealed class DeviceEventConsumer(
         return Task.CompletedTask;
     }
 }
+

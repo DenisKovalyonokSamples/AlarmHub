@@ -1,0 +1,27 @@
+﻿# Minimal collector for local development.
+# Receives OTLP from every service and prints spans to stdout, so a single trace can be followed
+# across ingest -> processing -> notifications without any SaaS account.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 2s
+
+exporters:
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+
+

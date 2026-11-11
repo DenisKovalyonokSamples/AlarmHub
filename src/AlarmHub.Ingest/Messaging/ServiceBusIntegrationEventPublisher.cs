@@ -7,10 +7,12 @@ namespace AlarmHub.Ingest.Messaging;
 /// Publishes integration events to an Azure Service Bus topic.
 /// </summary>
 /// <remarks>
-/// Two application properties travel with every message:
+/// Three application properties travel with every message:
 /// <list type="bullet">
 /// <item><description><c>type</c> — contract name, used by consumers to route without deserialising;</description></item>
-/// <item><description><c>traceparent</c> — W3C trace context, so one trace spans ingest, processing and notifications.</description></item>
+/// <item><description><c>Diagnostic-Id</c> — the property the Azure SDK reads to parent the consumer span,
+/// which is what keeps one trace across the broker hop;</description></item>
+/// <item><description><c>traceparent</c> — W3C context kept for non-.NET consumers.</description></item>
 /// </list>
 /// </remarks>
 /// <param name="sender">Sender bound to the destination topic.</param>
@@ -27,12 +29,10 @@ public sealed class ServiceBusIntegrationEventPublisher(ServiceBusSender sender)
 
         message.ApplicationProperties["type"] = eventType;
 
-        // Propagating the trace context keeps a single end-to-end trace across the broker hop.
-        string? traceParent = Activity.Current?.Id;
-
-        if (!string.IsNullOrWhiteSpace(traceParent))
+        if (Activity.Current?.Id is { Length: > 0 } traceParent)
         {
             message.ApplicationProperties["traceparent"] = traceParent;
+            message.ApplicationProperties["Diagnostic-Id"] = traceParent;
         }
 
         await sender.SendMessageAsync(message, cancellationToken);

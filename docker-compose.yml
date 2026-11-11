@@ -51,5 +51,16 @@ services:
     volumes:
       - ./deploy/servicebus/config.json:/ServiceBus_Emulator/ConfigFiles/Config.json:ro
 
+  # Receives OTLP from all services and prints spans, so one trace can be followed end to end.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.115.1
+    container_name: alarmhub-otel
+    command: ["--config=/etc/otel/config.yaml"]
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ./deploy/otel/collector-config.yaml:/etc/otel/config.yaml:ro
+
 volumes:
   alarmhub-pgdata:
