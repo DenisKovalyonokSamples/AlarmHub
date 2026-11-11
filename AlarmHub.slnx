@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AlarmHub.Api/AlarmHub.Api.csproj" />
+    <Project Path="src/AlarmHub.Contracts/AlarmHub.Contracts.csproj" />
+    <Project Path="src/AlarmHub.Identity/AlarmHub.Identity.csproj" />
+    <Project Path="src/AlarmHub.Ingest/AlarmHub.Ingest.csproj" />
+    <Project Path="src/AlarmHub.Notifications/AlarmHub.Notifications.csproj" />
+    <Project Path="src/AlarmHub.Processing/AlarmHub.Processing.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AlarmHub.ArchitectureTests/AlarmHub.ArchitectureTests.csproj" />
+    <Project Path="tests/AlarmHub.IntegrationTests/AlarmHub.IntegrationTests.csproj" />
+    <Project Path="tests/AlarmHub.UnitTests/AlarmHub.UnitTests.csproj" />
+  </Folder>
+</Solution>

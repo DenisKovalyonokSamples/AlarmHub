@@ -1,0 +1,6 @@
+@AlarmHub.Identity_HostAddress = http://localhost:5049
+
+GET {{AlarmHub.Identity_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
