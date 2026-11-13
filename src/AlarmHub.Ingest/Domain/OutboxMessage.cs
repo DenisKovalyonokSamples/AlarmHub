@@ -8,6 +8,11 @@ namespace AlarmHub.Ingest.Domain;
 /// the database could commit while the broker call fails (event lost), or the broker could accept
 /// a message that the database later rolls back (phantom event). The outbox removes that window:
 /// a background dispatcher publishes rows and marks them as sent.
+/// <para>
+/// <see cref="TraceParent"/> is what makes distributed tracing survive that dispatch step: the row
+/// stores the W3C context of the request that produced it, and the dispatcher re-creates the activity
+/// before publishing. Without it the broker hop would start a brand-new trace.
+/// </para>
 /// </remarks>
 public sealed class OutboxMessage
 {
@@ -22,6 +27,9 @@ public sealed class OutboxMessage
 
     /// <summary>Serialised event payload.</summary>
     public string Payload { get; private set; } = "{}";
+
+    /// <summary>W3C trace context of the request that produced the message; null when produced outside a request.</summary>
+    public string? TraceParent { get; private set; }
 
     /// <summary>Moment the message was successfully published; null while still pending.</summary>
     public DateTimeOffset? PublishedAt { get; private set; }
@@ -40,13 +48,15 @@ public sealed class OutboxMessage
     /// <summary>Creates a pending outbox message.</summary>
     /// <param name="type">Contract type name.</param>
     /// <param name="payload">Serialised payload.</param>
+    /// <param name="traceParent">W3C context of the producing activity.</param>
     /// <param name="now">Current UTC timestamp.</param>
-    public static OutboxMessage Create(string type, string payload, DateTimeOffset now) => new()
+    public static OutboxMessage Create(string type, string payload, string? traceParent, DateTimeOffset now) => new()
     {
         Id = Guid.NewGuid(),
         OccurredOn = now,
         Type = type,
         Payload = payload,
+        TraceParent = traceParent,
         Attempts = 0
     };
 

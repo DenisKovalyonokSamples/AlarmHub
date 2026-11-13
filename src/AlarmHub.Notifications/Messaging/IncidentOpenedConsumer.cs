@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Text.Json;
 using AlarmHub.Contracts.Incidents;
 using AlarmHub.Notifications.Domain;
@@ -64,8 +65,16 @@ public sealed class IncidentOpenedConsumer(
     /// <param name="args">Message context.</param>
     private async Task HandleMessageAsync(ProcessMessageEventArgs args)
     {
-        // The Azure Service Bus SDK already creates a consumer activity parented by the
-        // producer's "Diagnostic-Id" property, so no extra activity is started here.
+        // Continue the trace started by processing, so one trace covers the whole alert.
+        ActivityContext parentContext = default;
+
+        if (args.Message.ApplicationProperties.TryGetValue("traceparent", out object? rawTraceParent)
+            && rawTraceParent is string traceParent)
+        {
+            ActivityContext.TryParse(traceParent, null, out parentContext);
+        }
+
+        using Activity? activity = TraceSource.Instance.StartActivity("SendIncidentNotification", ActivityKind.Consumer, parentContext);
 
 
         IncidentOpenedV1? incident = JsonSerializer.Deserialize<IncidentOpenedV1>(args.Message.Body);

@@ -5,8 +5,9 @@ namespace AlarmHub.Processing.Domain;
 /// </summary>
 /// <remarks>
 /// The pattern is identical to the ingest service: business data and the pending integration event
-/// are committed atomically, then a background dispatcher publishes and stamps the row. Keeping a
-/// copy per service is intentional — each service owns its own database schema.
+/// are committed atomically, then a background dispatcher publishes and stamps the row. The stored
+/// <see cref="TraceParent"/> lets the dispatcher resume the originating trace instead of starting
+/// a detached one.
 /// </remarks>
 public sealed class OutboxMessage
 {
@@ -21,6 +22,9 @@ public sealed class OutboxMessage
 
     /// <summary>Serialised event payload.</summary>
     public string Payload { get; private set; } = "{}";
+
+    /// <summary>W3C trace context captured when the row was created.</summary>
+    public string? TraceParent { get; private set; }
 
     /// <summary>Moment the message was published; null while pending.</summary>
     public DateTimeOffset? PublishedAt { get; private set; }
@@ -39,13 +43,15 @@ public sealed class OutboxMessage
     /// <summary>Creates a pending outbox message.</summary>
     /// <param name="type">Contract type name.</param>
     /// <param name="payload">Serialised payload.</param>
+    /// <param name="traceParent">W3C context of the producing activity.</param>
     /// <param name="now">Current UTC timestamp.</param>
-    public static OutboxMessage Create(string type, string payload, DateTimeOffset now) => new()
+    public static OutboxMessage Create(string type, string payload, string? traceParent, DateTimeOffset now) => new()
     {
         Id = Guid.NewGuid(),
         OccurredOn = now,
         Type = type,
-        Payload = payload
+        Payload = payload,
+        TraceParent = traceParent
     };
 
     /// <summary>Marks the message as published.</summary>

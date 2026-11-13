@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Text.Json;
 using AlarmHub.Contracts.DeviceEvents;
 using AlarmHub.Contracts.Incidents;
@@ -64,8 +65,17 @@ public sealed partial class DeviceEventConsumer(
     /// <param name="args">Message and cancellation context.</param>
     private async Task HandleMessageAsync(ProcessMessageEventArgs args)
     {
-        // The Azure Service Bus SDK already creates a consumer activity parented by the
-        // producer's "Diagnostic-Id" property, so no extra activity is started here.
+        // Resume the producer trace from the message property; the Azure SDK wires this as a link,
+        // so an explicit consumer activity keeps parent/child semantics for the whole handler.
+        ActivityContext parentContext = default;
+
+        if (args.Message.ApplicationProperties.TryGetValue("traceparent", out object? rawTraceParent)
+            && rawTraceParent is string traceParent)
+        {
+            ActivityContext.TryParse(traceParent, null, out parentContext);
+        }
+
+        using Activity? activity = TraceSource.Instance.StartActivity("ProcessDeviceEvent", ActivityKind.Consumer, parentContext);
 
 
         DeviceEventReceivedV1? deviceEvent = JsonSerializer.Deserialize<DeviceEventReceivedV1>(args.Message.Body);
@@ -135,6 +145,7 @@ public sealed partial class DeviceEventConsumer(
         dbContext.OutboxMessages.Add(OutboxMessage.Create(
             nameof(IncidentOpenedV1),
             JsonSerializer.Serialize(integrationEvent),
+            Activity.Current?.Id,
             now));
 
         await dbContext.SaveChangesAsync(args.CancellationToken);

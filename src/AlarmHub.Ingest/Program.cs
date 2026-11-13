@@ -51,6 +51,7 @@ builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("alarmhub-ingest"))
     .WithTracing(tracing => tracing
         .AddSource("Azure.Messaging.ServiceBus")
+        .AddSource("AlarmHub.Ingest.Trace")
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
         .AddOtlpExporter(options =>

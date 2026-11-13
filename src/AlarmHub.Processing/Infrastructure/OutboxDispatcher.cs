@@ -1,5 +1,6 @@
 using AlarmHub.Processing.Domain;
 using AlarmHub.Processing.Messaging;
+using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlarmHub.Processing.Infrastructure;
@@ -74,6 +75,20 @@ public sealed class OutboxDispatcher(
         {
             try
             {
+                // Resume the producing trace from the outbox row; without this the broker hop
+                // would start a brand-new trace and lose the causal chain.
+                ActivityContext parentContext = default;
+
+                if (!string.IsNullOrWhiteSpace(message.TraceParent))
+                {
+                    ActivityContext.TryParse(message.TraceParent, null, out parentContext);
+                }
+
+                using Activity? publishActivity = TraceSource.Instance.StartActivity(
+                    "PublishOutboxMessage",
+                    ActivityKind.Producer,
+                    parentContext);
+
                 await publisher.PublishAsync(message.Type, message.Payload, cancellationToken);
                 message.MarkPublished(timeProvider.GetUtcNow());
                 published++;

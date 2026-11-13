@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using AlarmHub.Contracts.DeviceEvents;
 using AlarmHub.Ingest.Domain;
@@ -104,6 +105,7 @@ internal static class DeviceEventsEndpoints
         OutboxMessage outbox = OutboxMessage.Create(
             nameof(DeviceEventReceivedV1),
             JsonSerializer.Serialize(integrationEvent),
+            Activity.Current?.Id,
             now);
 
         // One SaveChanges call = one transaction: the event and its outbox row are atomic.
