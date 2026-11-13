@@ -50,14 +50,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service:
-          - AlarmHub.Api
-          - AlarmHub.Ingest
-          - AlarmHub.Identity
-          - AlarmHub.Processing
-          - AlarmHub.Notifications
+        include:
+          - service: AlarmHub.Api
+            image: api
+          - service: AlarmHub.Ingest
+            image: ingest
+          - service: AlarmHub.Identity
+            image: identity
+          - service: AlarmHub.Processing
+            image: processing
+          - service: AlarmHub.Notifications
+            image: notifications
     steps:
       - uses: actions/checkout@v4
 
+      # Docker requires a lowercase repository name, so the service id is mapped to a slug.
       - name: Build image
-        run: docker build -f src/${{ matrix.service }}/Dockerfile -t alarmhub/${{ matrix.service }}:${{ github.sha }} .
+        run: docker build -f src/${{ matrix.service }}/Dockerfile -t alarmhub/${{ matrix.image }}:${{ github.sha }} .
