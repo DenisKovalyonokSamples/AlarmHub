@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,6 +23,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\AlarmHub.Contracts\AlarmHub.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\AlarmHub.Api\AlarmHub.Api.csproj" />
+    <ProjectReference Include="..\..\src\AlarmHub.Ingest\AlarmHub.Ingest.csproj" />
   </ItemGroup>
 
 </Project>
