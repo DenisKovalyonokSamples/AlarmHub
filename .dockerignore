@@ -1,0 +1,11 @@
+# Build context hygiene: never ship host build output into the image.
+# Without this, Windows obj/ assets leak absolute paths and Linux restore fails.
+**/bin/
+**/obj/
+**/.vs/
+**/TestResults/
+**/node_modules/
+.git/
+.github/
+.logs/
+*.user
