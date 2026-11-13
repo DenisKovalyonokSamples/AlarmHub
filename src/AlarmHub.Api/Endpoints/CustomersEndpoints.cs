@@ -20,13 +20,15 @@ internal static class CustomersEndpoints
             .WithName("CreateCustomer")
             .WithSummary("Registers a new customer")
             .Produces<CustomerResponse>(StatusCodes.Status201Created)
-            .ProducesValidationProblem();
+            .ProducesValidationProblem()
+            .RequireAuthorization("alarms.write");
 
         group.MapGet("/{id:guid}", GetCustomerAsync)
             .WithName("GetCustomer")
             .WithSummary("Returns a customer with their sites")
             .Produces<CustomerDetailsResponse>()
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequireAuthorization("alarms.read");
 
         return app;
     }

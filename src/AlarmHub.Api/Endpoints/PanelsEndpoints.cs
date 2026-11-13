@@ -21,19 +21,22 @@ internal static class PanelsEndpoints
             .WithName("RegisterPanel")
             .WithSummary("Registers a panel and returns its API key exactly once")
             .Produces<RegisteredPanelResponse>(StatusCodes.Status201Created)
-            .ProducesValidationProblem();
+            .ProducesValidationProblem()
+            .RequireAuthorization("alarms.write");
 
         group.MapPost("/{panelId:guid}/sensors", AddSensorAsync)
             .WithName("AddSensor")
             .WithSummary("Adds a sensor zone to a panel")
             .Produces<SensorResponse>(StatusCodes.Status201Created)
-            .ProducesValidationProblem();
+            .ProducesValidationProblem()
+            .RequireAuthorization("alarms.write");
 
         group.MapGet("/{id:guid}", GetPanelAsync)
             .WithName("GetPanel")
             .WithSummary("Returns a panel with its sensors")
             .Produces<PanelDetailsResponse>()
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequireAuthorization("alarms.read");
 
         return app;
     }

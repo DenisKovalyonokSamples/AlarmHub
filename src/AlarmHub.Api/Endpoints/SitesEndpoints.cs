@@ -20,13 +20,15 @@ internal static class SitesEndpoints
             .WithName("CreateSite")
             .WithSummary("Creates a protected site for an existing customer")
             .Produces<SiteResponse>(StatusCodes.Status201Created)
-            .ProducesValidationProblem();
+            .ProducesValidationProblem()
+            .RequireAuthorization("alarms.write");
 
         group.MapGet("/{id:guid}", GetSiteAsync)
             .WithName("GetSite")
             .WithSummary("Returns a site with its panels")
             .Produces<SiteDetailsResponse>()
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequireAuthorization("alarms.read");
 
         return app;
     }

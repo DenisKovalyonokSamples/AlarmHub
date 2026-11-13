@@ -1,5 +1,6 @@
 using AlarmHub.Api.Endpoints;
 using AlarmHub.Api.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -27,6 +28,34 @@ builder.Services.AddDbContext<AlarmHubDbContext>(options =>
 // TimeProvider keeps domain code testable: tests inject a fake clock instead of sleeping.
 builder.Services.AddSingleton(TimeProvider.System);
 
+// Identity: the same code validates tokens from the local OpenIddict server or from Auth0.
+// Switching providers is a configuration change, not a code change.
+string authority = builder.Configuration["Auth:Authority"] ?? "http://localhost:5082";
+string audience = builder.Configuration["Auth:Audience"] ?? "alarmhub-api";
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = authority;
+        options.Audience = audience;
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+        options.TokenValidationParameters.ValidateAudience = false;
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    // The "scope" claim carries a space separated list, so policies split it instead of matching
+    // the whole string. Each endpoint asks for the narrowest scope it needs.
+    options.AddPolicy("alarms.read", policy => policy.RequireAssertion(context => HasScope(context.User, "alarms.read")));
+    options.AddPolicy("alarms.write", policy => policy.RequireAssertion(context => HasScope(context.User, "alarms.write")));
+});
+
+static bool HasScope(System.Security.Claims.ClaimsPrincipal user, string scope) =>
+    user.Claims
+        .Where(claim => claim.Type == "scope")
+        .SelectMany(claim => claim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        .Contains(scope, StringComparer.Ordinal);
+
 // OpenTelemetry is wired once per service; the collector endpoint comes from configuration
 // so the same image runs locally (compose) and in Azure (Honeycomb/App Insights exporter).
 string? otlpEndpoint = builder.Configuration["OpenTelemetry:Endpoint"];
@@ -34,6 +63,7 @@ string? otlpEndpoint = builder.Configuration["OpenTelemetry:Endpoint"];
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("alarmhub-api"))
     .WithTracing(tracing => tracing
+        .AddSource("Azure.Messaging.ServiceBus")
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
         .AddOtlpExporter(options =>
@@ -69,6 +99,9 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 // Liveness answers "is the process alive"; readiness is the endpoint a load balancer should use.
 app.MapHealthChecks("/health/live");

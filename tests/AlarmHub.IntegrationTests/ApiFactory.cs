@@ -1,6 +1,8 @@
-using AlarmHub.Api.Domain.Customers;
+﻿using AlarmHub.Api.Domain.Customers;
 using AlarmHub.Api.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -42,6 +44,13 @@ public sealed class ApiFactory : WebApplicationFactory<Customer>, IAsyncLifetime
     {
         builder.UseEnvironment("Development");
 
+        builder.ConfigureTestServices(services =>
+        {
+            // Tests bypass the token issuer but keep the same authorization policies in play.
+            services.AddAuthentication(TestAuthHandler.SchemeName)
+                .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { });
+        });
+
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
@@ -60,3 +69,4 @@ public sealed class ApiFactory : WebApplicationFactory<Customer>, IAsyncLifetime
         await action(dbContext);
     }
 }
+

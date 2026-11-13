@@ -32,6 +32,10 @@ builder.Services.AddOpenIddict()
         // Machine-to-machine only for now; interactive flows arrive with the React console.
         options.AllowClientCredentialsFlow();
 
+        // Signed JWT access tokens instead of encrypted ones: resource services validate them
+        // through the discovery document (the same path works for Auth0 in production).
+        options.DisableAccessTokenEncryption();
+
         options.RegisterScopes("alarms.read", "alarms.write", "devices.ingest");
 
         // Development certificates are fine for containers; production uses a Key Vault certificate.
@@ -100,4 +104,6 @@ app.Run();
 public partial class Program
 {
 }
+
+
 
