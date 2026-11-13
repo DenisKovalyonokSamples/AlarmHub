@@ -1,6 +1,7 @@
-# Local development stack for AlarmHub.
-# One Postgres instance hosts one database per service; the Service Bus emulator provides the
-# topics/subscriptions used by ingest, processing and notifications.
+﻿# Local development stack for AlarmHub.
+# Core infrastructure always starts; the five services run under the "app" profile so you can
+# either run them with `dotnet run` (fast inner loop) or fully in containers:
+#   docker compose --profile app up -d --build
 services:
   postgres:
     image: postgres:17-alpine
@@ -62,5 +63,104 @@ services:
     volumes:
       - ./deploy/otel/collector-config.yaml:/etc/otel/config.yaml:ro
 
+  identity:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: src/AlarmHub.Identity/Dockerfile
+    container_name: alarmhub-identity
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Identity: Host=postgres;Port=5432;Database=alarmhub_identity;Username=alarm;Password=alarm
+      Identity__DemoClientSecret: dev-secret-change-me
+      Identity__Issuer: http://identity:8080/
+      OpenTelemetry__Endpoint: http://otel-collector:4317
+    ports:
+      - "5082:8080"
+
+  api:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: src/AlarmHub.Api/Dockerfile
+    container_name: alarmhub-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      identity:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__AlarmHub: Host=postgres;Port=5432;Database=alarmhub_api;Username=alarm;Password=alarm
+      Auth__Authority: http://identity:8080
+      OpenTelemetry__Endpoint: http://otel-collector:4317
+    ports:
+      - "5080:8080"
+
+  ingest:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: src/AlarmHub.Ingest/Dockerfile
+    container_name: alarmhub-ingest
+    depends_on:
+      postgres:
+        condition: service_healthy
+      servicebus:
+        condition: service_started
+      api:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Ingest: Host=postgres;Port=5432;Database=alarmhub_ingest;Username=alarm;Password=alarm
+      ConnectionStrings__ServiceBus: Endpoint=sb://servicebus;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
+      Services__ApiBaseAddress: http://api:8080
+      OpenTelemetry__Endpoint: http://otel-collector:4317
+    ports:
+      - "5081:8080"
+
+  processing:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: src/AlarmHub.Processing/Dockerfile
+    container_name: alarmhub-processing
+    depends_on:
+      postgres:
+        condition: service_healthy
+      servicebus:
+        condition: service_started
+    environment:
+      DOTNET_ENVIRONMENT: Development
+      ConnectionStrings__Processing: Host=postgres;Port=5432;Database=alarmhub_processing;Username=alarm;Password=alarm
+      ConnectionStrings__ServiceBus: Endpoint=sb://servicebus;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
+      Services__ApiBaseAddress: http://api:8080
+      OpenTelemetry__Endpoint: http://otel-collector:4317
+
+  notifications:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: src/AlarmHub.Notifications/Dockerfile
+    container_name: alarmhub-notifications
+    depends_on:
+      postgres:
+        condition: service_healthy
+      servicebus:
+        condition: service_started
+    environment:
+      DOTNET_ENVIRONMENT: Development
+      ConnectionStrings__Notifications: Host=postgres;Port=5432;Database=alarmhub_notifications;Username=alarm;Password=alarm
+      ConnectionStrings__ServiceBus: Endpoint=sb://servicebus;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
+      Notifications__DefaultRecipient: operations@alarmhub.local
+      OpenTelemetry__Endpoint: http://otel-collector:4317
+
 volumes:
   alarmhub-pgdata:
+

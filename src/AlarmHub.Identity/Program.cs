@@ -1,4 +1,4 @@
-﻿using AlarmHub.Identity.Endpoints;
+using AlarmHub.Identity.Endpoints;
 using AlarmHub.Identity.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using OpenTelemetry.Resources;
@@ -35,6 +35,15 @@ builder.Services.AddOpenIddict()
         // Signed JWT access tokens instead of encrypted ones: resource services validate them
         // through the discovery document (the same path works for Auth0 in production).
         options.DisableAccessTokenEncryption();
+
+        // In containers the issuer must be the internal service name, otherwise a token requested
+        // through localhost carries an issuer the API cannot match against its authority.
+        string? issuer = builder.Configuration["Identity:Issuer"];
+
+        if (!string.IsNullOrWhiteSpace(issuer))
+        {
+            options.SetIssuer(new Uri(issuer));
+        }
 
         options.RegisterScopes("alarms.read", "alarms.write", "devices.ingest");
 
